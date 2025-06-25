@@ -3,6 +3,6 @@ train: images/train
 val: images/val
 
 names:
-  0: area
-  1: fish
+  0: fish
+  1: area
 

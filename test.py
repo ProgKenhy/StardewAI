@@ -1,82 +1,90 @@
 import time
-from dataclasses import dataclass
-from typing import Tuple
 
 import cv2
 import numpy as np
 import pyautogui
+from ultralytics import YOLO
+import os
 
 
-@dataclass
-class FishingConfig:
-    template_path: str = "template.png"  # Путь к шаблону восклицательного знака
-    center_radius: int = 50
-    y_offset: int = 145
-    match_threshold: float = 0.8  # Порог совпадения (0–1)
+class FishingBot:
+    def __init__(self):
+        self.model = YOLO('models/fish_detector.pt')
+        self.is_fishing = False
+        self.last_action = time.time()
 
+    def process_frame(self):
+        # 1. Делаем скриншот
+        screenshot = pyautogui.screenshot()
+        frame = np.array(screenshot)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-def show_debug_window(region: np.ndarray, result: np.ndarray, max_loc: Tuple[int, int], max_val: float) -> None:
-    """Окно с визуализацией процесса"""
-    debug_img = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
+        # 2. Детекция объектов
+        results = self.model(frame, conf=0.05)
 
-    # Рисуем прямоугольник вокруг найденного совпадения, если порог превышен
-    if max_val > 0.8:
-        cv2.rectangle(debug_img, max_loc,
-                      (max_loc[0] + 10, max_loc[1] + 10),  # Размер прямоугольника можно скорректировать
-                      (0, 255, 0), 2)
+        # 3. Поиск рыбы и зоны
+        fish = None
+        zone = None
 
-    # Текст с уровнем совпадения
-    cv2.putText(debug_img, f"{max_val:.2f}",
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                0.6, (255, 255, 255), 1)
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                center_y = (y1 + y2) // 2
 
-    cv2.imshow('Fishing Debug', debug_img)
-    cv2.waitKey(1)
+                if box.cls == 0:  # zone
+                    zone = (y1 + y2) // 2
 
+                elif box.cls == 1:  # fish
+                    fish = center_y
 
-def hooking_fish(config: FishingConfig) -> bool:
-    """Подсекаем рыбу при появлении восклицательного знака"""
-    center_x, center_y = pyautogui.size()[0] // 2, pyautogui.size()[1] // 2
+        # 4. Управление
+        if fish and zone:
+            self.control_fishing(fish, zone)
 
-    # Зона поиска выше головы персонажа
-    region = (
-        center_x - config.center_radius,
-        center_y - config.center_radius - config.y_offset,
-        config.center_radius * 2,
-        config.center_radius * 2
-    )
+        # 5. Отладка (опционально)
+        # debug_img = results[0].plot()
+        # cv2.imshow('Fishing Bot Debug', debug_img)
+        # cv2.waitKey(1)
 
-    # Загрузка шаблона
-    template = cv2.imread(config.template_path, cv2.IMREAD_GRAYSCALE)
-    template_h, template_w = template.shape[:2]
-
-    cv2.namedWindow('Fishing Debug', cv2.WINDOW_NORMAL)
-
-    try:
-        while True:
-            screenshot = pyautogui.screenshot(region=region)
-            img = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-            # Сопоставление шаблона
-            result = cv2.matchTemplate(gray, template, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-            # Визуализация отладки
-            show_debug_window(img, result, max_loc, max_val)
-
-            if max_val >= config.match_threshold:
-                print("! обнаружен - подсекаем!")
+    def control_fishing(self, fish_y, zone_y):
+        """Управление ЛКМ на основе позиций"""
+        if fish_y < zone_y - 15:  # Если рыба выше зоны
+            if not self.is_fishing:
                 pyautogui.mouseDown()
-                time.sleep(0.1)
+                self.is_fishing = True
+                print("Зажимаем ЛКМ")
+        else:
+            if self.is_fishing:
                 pyautogui.mouseUp()
-                return True
+                self.is_fishing = False
+                print("Отпускаем ЛКМ")
 
-            time.sleep(0.05)
-    finally:
+    def run(self):
+        test_image = cv2.imread('test_fish_image.png')
+        results = self.model(test_image, conf=0.009)
+        debug_img = results[0].plot()
+        cv2.imshow('Test Detection', debug_img)
+        cv2.waitKey(0)
         cv2.destroyAllWindows()
+        for result in results:
+            for box in result.boxes:
+                print(f"Class: {box.cls}, Confidence: {box.conf}, Coordinates: {box.xyxy}")
+
+        # try:
+        #     print("Бот запущен. Нажмите Ctrl+C для остановки")
+        #     while True:
+        #         self.process_frame()
+        #         time.sleep(0.05)  # ~20 FPS
+        # except KeyboardInterrupt:
+        #     pass
+        # finally:
+        #     if self.is_fishing:
+        #         pyautogui.mouseUp()
+        #     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    time.sleep(3)
-    hooking_fish(FishingConfig())
+
+    bot = FishingBot()
+
+    bot.run()

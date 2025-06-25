@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import pyautogui
 
+from fishing_bot import FishingBot
+
 
 @dataclass
 class FishingConfig:
@@ -83,8 +85,6 @@ def hooking_fish(config: FishingConfig) -> bool:
             time.sleep(0.05)
     finally:
         cv2.destroyAllWindows()
-        
-
 
 
 if __name__ == "__main__":
@@ -92,3 +92,5 @@ if __name__ == "__main__":
     casting_float()
     time.sleep(2)
     hooking_fish(FishingConfig())
+    bot = FishingBot()
+    bot.run()
