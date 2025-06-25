@@ -82,7 +82,6 @@ def hooking_fish(config: FishingConfig) -> bool:
                 pyautogui.mouseUp()
                 return True
 
-            time.sleep(0.05)
     finally:
         cv2.destroyAllWindows()
 
