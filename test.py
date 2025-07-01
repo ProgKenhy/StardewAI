@@ -9,7 +9,7 @@ import os
 
 class FishingBot:
     def __init__(self):
-        self.model = YOLO('models/fish_detector_2.pt')
+        self.model = YOLO('models/fish_detector_v4.pt')
         self.is_fishing = False
         self.last_action = time.time()
 
@@ -19,11 +19,11 @@ class FishingBot:
         frame = np.array(screenshot)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-        timestamp = time.strftime("%Y%m%d_%H%M%S")  # Метка времени
-        screenshot_path = f"screenshots/screenshot_{timestamp}.png"
-        os.makedirs("screenshots", exist_ok=True)  # Создаем папку, если её нет
-        cv2.imwrite(screenshot_path, frame)
-        print(f"Скриншот сохранен: {screenshot_path}")
+        # timestamp = time.strftime("%Y%m%d_%H%M%S")  # Метка времени
+        # screenshot_path = f"screenshots/screenshot_{timestamp}.png"
+        # os.makedirs("screenshots", exist_ok=True)  # Создаем папку, если её нет
+        # cv2.imwrite(screenshot_path, frame)
+        # print(f"Скриншот сохранен: {screenshot_path}")
 
         # 2. Детекция объектов
         results = self.model(frame, conf=0.05)
@@ -66,27 +66,27 @@ class FishingBot:
                 print("Рыба ниже!")
 
     def run(self):
-        # test_image = cv2.imread('test_fish_image.png')
-        # results = self.model(test_image, conf=0.5)
-        # debug_img = results[0].plot()
-        # cv2.imshow('Test Detection', debug_img)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        # for result in results:
-        #     for box in result.boxes:
-        #         print(f"Class: {box.cls}, Confidence: {box.conf}, Coordinates: {box.xyxy}")
+        test_image = cv2.imread('test_fish_image.png')
+        results = self.model(test_image, conf=0.5)
+        debug_img = results[0].plot()
+        cv2.imshow('Test Detection', debug_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        for result in results:
+            for box in result.boxes:
+                print(f"Class: {box.cls}, Confidence: {box.conf}, Coordinates: {box.xyxy}")
 
-        try:
-            print("Бот запущен. Нажмите Ctrl+C для остановки")
-            while True:
-                self.process_frame()
-                time.sleep(1)  # ~20 FPS
-        except KeyboardInterrupt:
-            pass
-        finally:
-            if self.is_fishing:
-                pyautogui.mouseUp()
-            cv2.destroyAllWindows()
+        # try:
+        #     print("Бот запущен. Нажмите Ctrl+C для остановки")
+        #     while True:
+        #         self.process_frame()
+        #         time.sleep(1)  # ~20 FPS
+        # except KeyboardInterrupt:
+        #     pass
+        # finally:
+        #     if self.is_fishing:
+        #         pyautogui.mouseUp()
+        #     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

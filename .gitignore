@@ -1,3 +1,7 @@
 .idea
 runs
 __pycache__
+fishing_dataset
+!fishing_dataset/data.yaml
+!fishing_dataset/train.py
+
